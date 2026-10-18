@@ -1,73 +1,74 @@
 # Sudoku
 
-A locally-hosted Sudoku generator and player. Pure HTML/CSS/JS — no build step, no dependencies, no server, and no network connection required. Open one file and play.
+A fully-featured Sudoku generator and player built from scratch in vanilla JavaScript — no frameworks, no build step, no dependencies. Every puzzle is generated in-browser and mathematically guaranteed to have a single unique solution.
 
-## Purpose
+> A portfolio project demonstrating algorithm design (constraint-satisfaction backtracking), clean separation of concerns, and thoughtful, user-centred interface design — all in ~600 lines of dependency-free code.
 
-This is a complete, self-contained Sudoku game that runs entirely in your browser. Every puzzle is generated on the fly and is guaranteed to have exactly one solution, so you never hit an unsolvable or ambiguous board. It is meant to be something you can drop onto any machine — or host on a tiny static server — and immediately have an endless supply of fair puzzles across four difficulty levels.
+## Highlights
 
-## Why it was made
+- **Custom puzzle-generation engine** — fills a grid with randomized backtracking (MRV heuristic) and carves it down to a puzzle, verifying uniqueness after every removal so no board is ever ambiguous or unsolvable.
+- **Four difficulty tiers** — Easy, Medium, Hard, and Very Hard, driven by target clue counts.
+- **Zero dependencies** — hand-written HTML, CSS, and JavaScript. Opens straight from the filesystem; runs anywhere a browser does.
+- **Separation of concerns** — the solving/generation engine (`sudoku.js`) is completely decoupled from the UI layer (`app.js`) and independently testable in Node.
+- **Polished UX** — self-pruning notes, mistake feedback that explains the conflict, live per-digit counters, hints, timer, and full keyboard control.
 
-Most free Sudoku sites are cluttered with ads, trackers, and accounts, and many "random" puzzle generators quietly produce boards with multiple solutions. The goals here were:
+## Tech stack
 
-- **Offline and private** — no accounts, no ads, no analytics, nothing leaves your machine.
-- **Correct by construction** — puzzles are verified for a unique solution at generation time rather than pulled from a fixed bank.
-- **Zero friction** — a single folder of static files with no toolchain, so it works anywhere a browser does and is easy to read, fork, and modify.
-- **Genuinely helpful assists** — notes that prune themselves, mistake feedback that explains *why* an entry is wrong, and per-digit counters, so it supports learning rather than just testing.
+| Layer | Technology |
+|---|---|
+| Logic | Vanilla JavaScript (ES6+), no libraries |
+| UI | Semantic HTML + CSS Grid, responsive, dark theme |
+| Tooling | None required — static files only |
 
-## Running it
-
-Easiest way — run the launcher script, which starts a local server and opens the app in your default browser:
+## Demo
 
 ```
 ./start.sh
 ```
 
-(Optionally pass a port: `./start.sh 9000`.)
+Starts a local server and opens the app in your browser. (Optional port: `./start.sh 9000`.)
 
-Or do it manually: open `index.html` directly in a browser, or serve the folder locally:
+Or open `index.html` directly, or serve the folder with `python3 -m http.server 8765` and visit `http://localhost:8765`.
 
-```
-python3 -m http.server 8765
-```
+## Engineering notes
 
-Then visit `http://localhost:8765`.
+### Guaranteeing a unique solution
 
-## Features
+Naive generators often produce boards with multiple solutions. This one builds a puzzle by:
 
-- **Four difficulties** — Easy (40 clues), Medium (32), Hard (27), Very Hard (~23).
-- **Unique solutions** — every generated puzzle is verified to have exactly one solution.
-- **Smart notes** — pencil-mark mode; placing a correct number automatically removes that candidate from the notes of every cell in the same row, column, and box.
-- **Explained mistakes** — an incorrect entry flashes, tells you why it's wrong (row / column / box conflict), then clears itself.
-- **Per-digit counters** — the number pad shows how many of each digit are still left to place, fading out once a digit is fully used.
-- **Hints** — reveal a single correct cell when you're stuck.
-- **Check** — highlights incorrect entries without revealing the answers.
-- **Solve** — reveals the full solution.
-- **Timer and mistake tracking.**
-- **Keyboard support** — arrow keys to move, `1`–`9` to fill, `Backspace`/`Delete` to erase.
+1. **Filling** a complete, valid 9×9 grid using randomized backtracking. A minimum-remaining-values (MRV) heuristic always expands the most-constrained cell first, which prunes the search tree dramatically and keeps generation near-instant.
+2. **Carving** cells out in random order. After each removal, a solution counter re-solves the board but **short-circuits as soon as it finds a second solution** — all that's needed to prove non-uniqueness. If the puzzle becomes ambiguous, the digit is restored.
+3. **Stopping** at the target clue count for the chosen difficulty.
 
-## Files
+This makes correctness a property of the generator itself rather than something hoped for.
 
-| File | Purpose |
+### Difficulty model
+
+Difficulty maps to clue count (Easy 40 → Very Hard ~23). Fewer clues force more advanced logical techniques, but because uniqueness is enforced, every level stays solvable by deduction without guessing.
+
+### UX decisions
+
+- **Notes prune themselves** — placing a correct number removes that candidate from every peer cell's notes (same row, column, and box), mirroring how a person would erase pencil marks.
+- **Mistakes teach** — a wrong entry doesn't just turn red; it names the conflict ("5 already appears in this row") before clearing, so the feedback is instructive.
+- **Candidate counters** — the number pad shows how many of each digit remain, fading out when a digit is fully placed.
+
+## Project structure
+
+| File | Responsibility |
 |---|---|
-| `index.html` | Page structure |
-| `style.css` | Styling |
-| `sudoku.js` | Puzzle generation and solving engine |
-| `app.js` | UI logic and event handling |
-| `start.sh` | Launcher: starts a local server and opens the app in your browser |
+| `sudoku.js` | Pure logic: grid model, solver, generator, uniqueness check |
+| `app.js` | UI state, rendering, input handling, game flow |
+| `index.html` | Markup |
+| `style.css` | Styling and responsive layout |
+| `start.sh` | Convenience launcher |
 
-## How generation works
+## Possible extensions
 
-1. Fill a full 9×9 grid via randomized backtracking, using a minimum-remaining-values (MRV) heuristic to keep it fast.
-2. Remove cells one at a time in random order; after each removal, run a solution counter capped at 2. If more than one solution exists, put the digit back. This guarantees every puzzle has exactly one solution.
-3. Removal stops once the target clue count for the chosen difficulty is reached (or no more cells can be removed without breaking uniqueness).
-
-Because clue count alone is an approximation of difficulty, the lower-clue levels tend to require more advanced solving techniques, but all levels remain solvable by logic without guessing.
-
-## Browser support
-
-Works in any modern browser (Chrome, Firefox, Safari, Edge). Uses only standard HTML, CSS, and vanilla JavaScript — no frameworks.
+- Persist in-progress games to `localStorage`
+- Undo/redo history
+- Auto-candidate ("fill all notes") mode
+- Shareable puzzle seeds
 
 ## License
 
-Released under the [MIT License](LICENSE) — free to use, modify, and distribute.
+[MIT](LICENSE) — free to use, modify, and distribute.
